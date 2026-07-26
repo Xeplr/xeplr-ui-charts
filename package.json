@@ -1,0 +1,37 @@
+{
+  "name": "@xeplr/ui-charts",
+  "version": "1.0.0",
+  "description": "Organized ECharts spec → option builder + React <Chart> for direct Apache ECharts (no wrapper). Premium optimizers plug in at the option level.",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "lib/"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "peerDependencies": {
+    "echarts": "^5.4.0",
+    "react": ">=17"
+  },
+  "keywords": [
+    "echarts",
+    "charts",
+    "react",
+    "dataviz",
+    "visualization",
+    "xeplr"
+  ],
+  "author": "xeplr",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Xeplr/xeplr-ui-charts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "echarts": "^6.1.0"
+  }
+}

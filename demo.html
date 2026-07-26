@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xeplr-ui-charts — live demo</title>
+<style>
+  :root {
+    --plane:#0d0d0d; --surface:#1a1a19; --card:#17181a; --accent:#3987e5;
+    --ink:#fff; --ink2:#c3c2b7; --muted:#898781; --hair:#2c2c2a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(120% 80% at 50% -10%,#1c1e22 0%,var(--plane) 60%);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:clamp(20px,5vw,56px) clamp(16px,5vw,48px) 64px;
+  }
+  .wrap{max-width:920px;margin:0 auto}
+  .eyebrow{font-family:var(--mono);font-size:12px;color:var(--accent);margin:0 0 12px;letter-spacing:.06em}
+  h1{font-size:clamp(24px,4vw,34px);line-height:1.12;font-weight:620;letter-spacing:-.02em;margin:0 0 10px;text-wrap:balance}
+  .lede{color:var(--ink2);max-width:62ch;margin:0 0 24px;font-size:15px}
+  code{font-family:var(--mono);font-size:.88em;color:var(--ink);background:#ffffff10;padding:1px 5px;border-radius:4px}
+  .stage{
+    background:var(--surface);border:1px solid var(--hair);border-radius:14px;
+    padding:clamp(12px,3vw,22px);
+    box-shadow:0 20px 60px -30px #000, inset 0 1px 0 #ffffff08;
+  }
+  .stage .cap{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:2px 4px 14px;font-size:13px;color:var(--muted)}
+  .stage .cap b{color:var(--ink);font-weight:600}
+  #chart{width:100%;height:460px}
+  #warnings{margin-top:16px;font-family:var(--mono);font-size:12.5px}
+  .ok{color:#0ca30c}.warn{color:var(--accent)}
+  .note{margin-top:22px;padding:13px 16px;border-left:2px solid var(--accent);background:#3987e514;border-radius:0 8px 8px 0;color:var(--ink2);font-size:13.5px}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">@xeplr/ui-charts · live in the browser</p>
+  <h1>sampleChart, rendered by the real pipeline.</h1>
+  <p class="lede">
+    This page loads the actual <code>lib/chart-options.js</code> + <code>lib/theme.js</code> and
+    <code>echarts</code> from <code>node_modules</code> — edit the <code>sampleChart</code> object in
+    the source and refresh. Interactive: hover the bars. Rendered with the <b>brand-neutral</b>
+    <code>xeplr-dark</code> default theme (a consumer swaps in their own via <code>makeTheme</code>).
+  </p>
+
+  <div class="stage">
+    <div class="cap"><b>Monthly Revenue Graph</b><span>xeplr-dark · canvas · blue #3987e5</span></div>
+    <div id="chart"></div>
+  </div>
+  <div id="warnings"></div>
+
+  <p class="note">
+    <b>Pipeline:</b> <code>ChartOptions</code> → <code>chartOptionsToOption()</code> → ECharts option → render.
+    <code>data</code>→dataset, <code>axes.x/y.labels</code>→series encode, <code>chartType</code>→series type.
+    The palette, 4px rounded bar-tops, and the recessive grid come from the theme.
+  </p>
+  <div id="error"></div>
+</div>
+
+<!-- real ECharts (full bundle — fine for a demo; the package itself tree-shakes) -->
+<script src="./node_modules/echarts/dist/echarts.min.js"></script>
+<!-- load the actual lib files via a CommonJS shim so the demo stays in sync -->
+<script>window.module = { exports: {} };</script>
+<script src="./lib/theme.js"></script>
+<script>var themes = window.module.exports; window.module = { exports: {} };</script>
+<script src="./lib/chart-options.js"></script>
+<script>var chartOptionsToOption = window.module.exports;</script>
+
+<script>
+  try {
+    themes.registerThemes(echarts);   // registers the neutral xeplr-dark / xeplr-light
+
+    // Your sampleChart — valid shape (the type.js version crashes because `axes`
+    // is never initialized before `sampleChart.axes.x.labels = …`).
+    var sampleChart = {
+      data: [
+        { month: 'Jan 2020', revenue: 18700 },
+        { month: 'Feb 2020', revenue: 1000 },
+        { month: 'Mar 2020', revenue: 20089 },
+        { month: 'Apr 2020', revenue: 19998 },
+        { month: 'May 2020', revenue: 20012 },
+        { month: 'Jun 2020', revenue: 18991 }
+      ],
+      axes: {
+        x: { labels: ['month'], title: { show: true, text: 'Monthly Revenue Graph' } },
+        y: { labels: ['revenue'] }
+      },
+      tooltip: { show: true },     // so hover shows a tooltip
+      chartType: 'bar'
+    };
+
+    var result = chartOptionsToOption(sampleChart);
+    console.log('ECharts option:', result.option);
+
+    var chart = echarts.init(document.getElementById('chart'), 'xeplr-dark', { renderer: 'canvas' });
+    chart.setOption(result.option);
+    window.addEventListener('resize', function () { chart.resize(); });
+
+    var w = document.getElementById('warnings');
+    w.innerHTML = result.warnings.length
+      ? '<span class="warn">⚠ ' + result.warnings.length + ' warning(s): ' + result.warnings.join(' · ') + '</span>'
+      : '<span class="ok">✓ 0 warnings — every field mapped cleanly</span>';
+  } catch (e) {
+    document.getElementById('error').textContent = 'Render failed: ' + (e && e.stack || e);
+    console.error(e);
+  }
+</script>
+</body>
+</html>
