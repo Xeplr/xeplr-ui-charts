@@ -1,7 +1,7 @@
 {
   "name": "@xeplr/ui-charts",
   "version": "1.0.1",
-  "description": "Organized ECharts spec → option builder + React <Chart> for direct Apache ECharts (no wrapper). Premium optimizers plug in at the option level.",
+  "description": "Organized ECharts spec \u2192 option builder + React <Chart> for direct Apache ECharts (no wrapper). Premium optimizers plug in at the option level.",
   "main": "index.js",
   "files": [
     "index.js",
@@ -33,5 +33,8 @@
   },
   "devDependencies": {
     "echarts": "^6.1.0"
+  },
+  "dependencies": {
+    "@xeplr/rules": "^1.0.0"
   }
 }

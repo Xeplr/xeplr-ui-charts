@@ -33,6 +33,51 @@ import { XeplrChart } from '@xeplr/ui-charts';
 ECharts-mirror `<Chart spec={…} />` (backed by `buildOption`) is also exported for
 callers who'd rather author ECharts-shaped specs directly.
 
+### `chartType`
+
+An **ECharts series type** — `bar`, `line`, `pie`, `scatter`, or any other,
+including one you registered yourself. ECharts is the vocabulary; anything it
+accepts flows through untouched.
+
+Three aliases cover the charts every UI offers that ECharts has no series type
+for. Each resolves to a real type *before* anything reaches ECharts, so an
+unrenderable series is never handed over:
+
+| you say | ECharts gets |
+|---|---|
+| `area`  | `line` + `areaStyle` |
+| `donut` | `pie` + `radius: ['45%','70%']` |
+| `hbar`  | `bar` with the axis roles swapped — category on y, value on x |
+
+Saying it in ECharts' own terms is the same chart: `chartType:'line'` with a
+series `areaStyle` and `chartType:'area'` produce identical output.
+
+A value axis gets `boundaryGap: [0, '10%']` by default — headroom, so the
+tallest point doesn't sit on the top gridline and an area chart isn't clipped
+flat against it. Nothing is added below, since a baseline belongs at zero. It
+applies to whichever axis carries the value, so `hbar` gets it on x. Set
+`axes.y.boundaryGap` (ECharts' own property, passed through verbatim) to
+override.
+
+Binding follows the type, and three types don't bind through `encode` at all —
+handing them one draws nothing, silently:
+
+| binding | types | shape |
+|---|---|---|
+| cartesian | bar, line, scatter, area… | `encode:{x,y}` + a pair of axes |
+| name/value | pie, donut, funnel, sunburst | `encode:{itemName,value}`, **no axes** |
+| radar | radar | `radar.indicator` from the categories; each measure is one shape over them, sharing one max |
+| treemap | treemap | a flat `series.data` of `{name,value}` — treemap has no dataset support |
+| heatmap | heatmap | **two** category axes + `[x,y,value]` cells + a `visualMap` |
+
+A heatmap crosses two groupings, so it reads a second dimension from
+`axes.x.labels[1]` — `x.labels` has always been the dimension list and other
+charts simply use the first. Given only one it warns rather than drawing a
+single stripe that would look like it worked.
+
+Non-cartesian types are given **no axes at all**, including when the theme
+carries axis styling, which would otherwise draw a bare cross behind the slices.
+
 ## The spec (organized ECharts mirror)
 
 It **is** an ECharts `option`, just organized with sane defaults and two
