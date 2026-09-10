@@ -1,6 +1,6 @@
 {
   "name": "@xeplr/ui-charts",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Organized ECharts spec → option builder + React <Chart> for direct Apache ECharts (no wrapper). Premium optimizers plug in at the option level.",
   "main": "index.js",
   "files": [
