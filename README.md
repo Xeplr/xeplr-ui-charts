@@ -1,144 +1,205 @@
 # @xeplr/ui-charts
 
-Direct **Apache ECharts** in React (no wrapper), driven by an **organized
-ECharts-mirror spec**. A premium optimizer plugs in at the option level.
-
-```
-organized spec → buildOption → EChartsOption → [premium.optimize] → useECharts render
-```
-
-## Usage
-
-Primary component — pass the semantic `ChartOptions` object:
+**Apache ECharts in React, driven by a semantic, CSS-like `ChartOptions` object.** `XeplrChart` translates the options — data, axes, legend, labels, chart type, theme values and conditional-formatting rules — into an ECharts `option` and renders it with ECharts directly, no wrapper library.
 
 ```jsx
-import { XeplrChart } from '@xeplr/ui-charts';
+import { XeplrChart } from '@xeplr/ui-charts'
 
 <XeplrChart
-  chartOptions={{
-    data: [{ month: 'Jan', revenue: 18700 }, /* … */],
-    axes: {
-      x: { labels: ['month'], title: { show: true, text: 'Monthly Revenue' } },
-      y: { labels: ['revenue'] }
-    },
-    chartType: 'bar'
-  }}
   height={360}
-  theme="xeplr-dark"          // brand-neutral default; or "xeplr-light"
-  onWarnings={(w) => console.warn(w)}   // optional; unmapped props reported here
+  chartOptions={{
+    chartType: 'bar',
+    data: [{ dept: 'IPD', revenue: 180, margin: -4 }, { dept: 'OPD', revenue: 240, margin: 12 }],
+    axes: { x: { labels: ['dept'] }, y: { labels: [{ field: 'revenue', name: 'Revenue (£k)' }] } },
+    rules: [{ field: 'margin', op: 'lt', value: 0, target: 'mark', then: { color: '#c2372e' } }]
+  }}
 />
 ```
 
-`XeplrChart` runs `chartOptionsToOption()` internally. Lower-level, the
-ECharts-mirror `<Chart spec={…} />` (backed by `buildOption`) is also exported for
-callers who'd rather author ECharts-shaped specs directly.
+## How the pieces fit
 
-### `chartType`
-
-An **ECharts series type** — `bar`, `line`, `pie`, `scatter`, or any other,
-including one you registered yourself. ECharts is the vocabulary; anything it
-accepts flows through untouched.
-
-Three aliases cover the charts every UI offers that ECharts has no series type
-for. Each resolves to a real type *before* anything reaches ECharts, so an
-unrenderable series is never handed over:
-
-| you say | ECharts gets |
+| what | where |
 |---|---|
-| `area`  | `line` + `areaStyle` |
-| `donut` | `pie` + `radius: ['45%','70%']` |
-| `hbar`  | `bar` with the axis roles swapped — category on y, value on x |
+| The component | `XeplrChart` — `chartOptions` in, a sized `<div>` with a chart out |
+| `ChartOptions` → ECharts `option` | `chartOptionsToOption` — pure, no React or ECharts |
+| Conditions ("margin under zero") | [`@xeplr/rules`](https://www.npmjs.com/package/@xeplr/rules) — `matches`, operators, number formatting |
+| What a match does on a chart | `lib/rules.js` — ECharts `itemStyle` callbacks and label formatters |
+| Theme values (palette, fonts, per-type marks) | arrive **on** `ChartOptions` — typically from `@xeplr/ui-utils`' `resolveTheme`; nothing is registered here |
+| Raw ECharts-shaped specs | `Chart` + `buildOption` |
+| Init, resize, dispose | `useECharts` |
+| The ECharts instance and its registered modules | `echarts` |
 
-Saying it in ECharts' own terms is the same chart: `chartType:'line'` with a
-series `areaStyle` and `chartType:'area'` produce identical output.
+## Install
 
-A value axis gets `boundaryGap: [0, '10%']` by default — headroom, so the
-tallest point doesn't sit on the top gridline and an area chart isn't clipped
-flat against it. Nothing is added below, since a baseline belongs at zero. It
-applies to whichever axis carries the value, so `hbar` gets it on x. Set
-`axes.y.boundaryGap` (ECharts' own property, passed through verbatim) to
-override.
+```sh
+npm i @xeplr/ui-charts echarts
+```
 
-Binding follows the type, and three types don't bind through `encode` at all —
-handing them one draws nothing, silently:
+Peers: `echarts` (`^5.4.0`), `react` (17+). Dependency: `@xeplr/rules`. CommonJS, no JSX and no build step.
+
+## Exports
+
+| export | |
+|---|---|
+| `XeplrChart` | React component for `ChartOptions` |
+| `chartOptionsToOption(chartOptions, { rootFontSize? })` | → `{ option, seriesLabel, chartType, warnings }`. `rootFontSize` (16) converts `rem` / `em` |
+| `Chart` | React component for an ECharts-shaped `spec` |
+| `buildOption(spec)` | → an ECharts `option` |
+| `useECharts(option, { theme, renderer, optimize, onEvents, notMerge })` | → `{ containerRef, getInstance }` |
+| `echarts` | the `echarts/core` instance with the default modules registered |
+
+## XeplrChart props
+
+| prop | default | |
+|---|---|---|
+| `chartOptions` | — | required |
+| `width`, `height` | `chartOptions.width` / `height`, else `'100%'` / `320` | numbers are px |
+| `top`, `left` | `chartOptions.top` / `left` | either one makes the container `position: absolute` |
+| `renderer` | `'canvas'` | or `'svg'` |
+| `theme` | — | a registered ECharts theme name — normally unset, since styling travels in `chartOptions` |
+| `optimize` | — | `(option) => option`, applied just before `setOption` |
+| `onWarnings` | — | `(string[])`; without it warnings go to `console.warn` |
+| `silent` | `false` | suppress that `console.warn` |
+| `onEvents` | — | `{ click: fn, … }`, bound when the chart is created |
+| `notMerge` | `true` | `false` merges into the previous option (animates changes) |
+| `style`, `className` | — | container |
+
+`theme`, `renderer` and `onEvents` are fixed when the chart is created — ECharts cannot swap a theme or renderer live — so change them by remounting (a React `key`). The chart resizes with its container (`ResizeObserver`) and is disposed on unmount.
+
+## ChartOptions
+
+The full typedefs are in `type.js`. Sizes are CSS-like strings (`'12px'`, `'1rem'`, `'10pt'`, `'50%'`) or numbers.
+
+| key | |
+|---|---|
+| `chartType` | an ECharts series type, or an alias — see Chart types |
+| `data` | rows → `dataset.source` |
+| `axes.x.labels` | the category field (`[0]`); a heatmap's second dimension is `[1]` |
+| `axes.y.labels` | one series per entry: `'revenue'` or `{ field: 'revenue', name: 'Revenue (£k)' }` — the field is the data key, the name is what the legend shows |
+| `axes.x` / `axes.y` | `show`, `line`, `grid`, `ticks` (`font`, `angle`, `margin`, `length`, `color`, `formatter`), `title` (`text`, `font`, `margin`), `boundaryGap`, `scale` |
+| `title` | `show`, `text`, `font`, `positioning`, `style` |
+| `legend` | `show`, `font`, `positioning`, `itemGap`, `style` |
+| `tooltip` | `show`, `font`, `style`, `formatter` |
+| `dataLabel` | `show`, `positioning`, `font`, `style`, `formatter`, `distance`, `rotate`, `offsetX` / `offsetY`, `minMargin`, `maxWidth`, `overflow`, `layout` (`hideOverlap`, `moveOverlap`), `labelLine` (pie / donut / funnel callouts) |
+| `chartArea` | `margin`, `padding` (added together into `grid`), `style.background` |
+| `rules` | conditional formatting — see below |
+| `palette` | series colour cycle → `option.color` |
+| `fontFamily` | → `option.textStyle.fontFamily`, which ECharts cascades to all text |
+| `marks` | per chart type: line `width` / `symbol` / `symbolSize` / `smooth`; bar `border.radius` and `gap` (stacked bars only); scatter `symbolSize`; pie `border`, `label.font.color`. Looked up under the alias first (`donut`), then the resolved type (`pie`) |
+| `width`, `height`, `top`, `left` | the container, not the option |
+
+`positioning.position` is `top`, `bottom`, `left`, `right` or `center` (a `left` / `right` legend is vertical); `align` is `start` / `center` / `end`; `margin` offsets.
+
+**Nothing unmappable is dropped silently.** Properties ECharts cannot express — `font.letterSpacing`, `transform`, `decoration`, `variant`; `background.image`; `shadow.spread`; container `opacity`; `legend.iconGap`; a `double` border (drawn solid) — are reported in `warnings`.
+
+## Chart types
+
+`chartType` is an ECharts series type — `bar`, `line`, `pie`, `scatter`, or any type you register. Aliases resolve to a real type before anything reaches ECharts, because a series type ECharts does not know renders nothing and says nothing:
+
+| alias | ECharts gets |
+|---|---|
+| `area` | `line` + `areaStyle` |
+| `donut` | `pie` + `radius: ['45%', '70%']` |
+| `hbar` | `bar`, category on y and value on x |
+| `stackedBar` | `bar` + `stack: 'total'` |
+| `stackedHbar` | horizontal `bar` + `stack: 'total'` |
+| `stackedArea` | `line` + `areaStyle` + `stack: 'total'` |
+
+Binding follows the type:
 
 | binding | types | shape |
 |---|---|---|
-| cartesian | bar, line, scatter, area… | `encode:{x,y}` + a pair of axes |
-| name/value | pie, donut, funnel, sunburst | `encode:{itemName,value}`, **no axes** |
-| radar | radar | `radar.indicator` from the categories; each measure is one shape over them, sharing one max |
-| treemap | treemap | a flat `series.data` of `{name,value}` — treemap has no dataset support |
-| heatmap | heatmap | **two** category axes + `[x,y,value]` cells + a `visualMap` |
+| cartesian | everything not below | `encode: { x, y }` (swapped for horizontal) + axes |
+| name / value | `pie`, `funnel`, `gauge`, `sunburst`, `sankey`, `graph`, `tree`, `themeRiver` | `encode: { itemName, value }`, **axes removed** |
+| radar | `radar` | categories become `radar.indicator`; each measure is one shape; **one shared max** so shapes are comparable |
+| treemap | `treemap` | `series.data` of `{ name, value }` (treemap has no dataset support); first measure only |
+| heatmap | `heatmap` | two category axes from `x.labels[0]` and `[1]`, `[x, y, value]` cells, and a `visualMap` over the value range (with a `palette` of two or more colours, low → high runs from the last colour to the first). With one dimension it warns and draws nothing, rather than a stripe that looks like it worked |
 
-A heatmap crosses two groupings, so it reads a second dimension from
-`axes.x.labels[1]` — `x.labels` has always been the dimension list and other
-charts simply use the first. Given only one it warns rather than drawing a
-single stripe that would look like it worked.
+Non-cartesian types get **no axes at all** — left in place, theme axis styling draws a bare cross behind the slices. Categories keep the order the rows give them.
 
-Non-cartesian types are given **no axes at all**, including when the theme
-carries axis styling, which would otherwise draw a bare cross behind the slices.
+### Value axis defaults
 
-## The spec (organized ECharts mirror)
+- `boundaryGap: [0, '10%']` — headroom above the tallest value, on whichever axis carries the value.
+- `scale` (fit the data rather than include zero): **`false` for bars, stacked series and filled areas** — a bar's length is the quantity, stacked segments sum from a baseline, a fill reads as volume — and **`true` otherwise**, since a line or scatter shows change and zero flattens it. Without `scale`, ECharts ignores the headroom.
 
-It **is** an ECharts `option`, just organized with sane defaults and two
-conveniences. Anything ECharts accepts flows straight through — that's the escape
-hatch.
+Set `axes.y.boundaryGap` or `axes.y.scale` (`axes.x` for `hbar`) to override either.
 
-- **`data: rows`** → `dataset: { source: rows }`.
-- **`field`-binding** → ECharts `encode`:
-  - `xAxis:{field:'month'}` + `series:[{type:'bar', field:'sales'}]` → `encode:{x:'month',y:'sales'}`
-  - `yAxis:{field}` → horizontal; pie `series:{type:'pie', categoryField, field}` → `encode:{itemName,value}`
-- **Defaults** (spec always wins): grid + `tooltip.trigger:'axis'` for cartesian /
-  `'item'` otherwise, legend when multi-series, animation on.
-- **Meta keys** `renderer` / `theme` are consumed by the renderer, stripped from the option.
-
-`buildOption(spec)` is a pure function — the contract both the renderer and premium
-optimizers operate on.
-
-## Premium seam
-
-`<Chart optimize={fn} />` (or `useECharts(spec, { optimize })`) — `optimize` is a
-pure `(EChartsOption) => EChartsOption` applied right before `setOption`. Premium
-algorithms live in the suite, import nothing from here beyond the option shape, and
-optimize **any** chart (spec-built or raw).
-
-## Theme
-
-This is an **upstream, brand-neutral** package — it ships **no** consumer branding.
-The defaults `xeplr-dark` / `xeplr-light` use the dataviz method's validated
-*reference* palette (blue-led): dark worst-adjacent CVD ΔE 10.3 (floor band), light
-ΔE 24.2. Mark specs (2px lines, ≥8px markers, 4px rounded bars, 2px pie gaps,
-recessive axes) are baked in.
-
-**Consumers supply their own brand theme downstream.** The theme *structure* lives
-here in `makeTheme(palette)`; the brand *values* live in the app:
+## Conditional formatting
 
 ```js
-import { echarts, makeTheme } from '@xeplr/ui-charts';
-echarts.registerTheme('mybrand-dark', makeTheme({
-  color: ['#c98500', '#3987e5', /* …validated brand hues… */],
-  surface: '#1a1a19', primary: '#fff', secondary: '#c3c2b7',
-  muted: '#898781', gridline: '#2c2c2a', baseline: '#383835'
-}));
-// <Chart theme="mybrand-dark" ... />
+rules: [
+  { field: 'margin', op: 'lt', value: 0, target: 'mark', then: { color: '#c2372e', opacity: 0.5 } },
+  { field: 'margin', op: 'lt', value: 0, series: 'revenue', target: 'dataLabel',
+    then: { color: '#c2372e', fontWeight: 'bold', format: { style: 'currency', currency: 'GBP', decimals: 0 } } },
+  { field: 'revenue', op: 'lt', value: 100, target: 'dataLabel', then: { hide: true } },
+  { field: 'dept', op: 'eq', value: 'IPD', target: 'axisX', then: { color: '#c2372e' } }
+]
 ```
 
-## Bundle / registration
+| key | |
+|---|---|
+| `field` | the column to test — any column in `data`, plotted or not; text or number |
+| `op`, `value`, `value2` | `@xeplr/rules` operators: `lt`, `lte`, `gt`, `gte`, `between`, `eq`, `neq`, `contains`, `startsWith`, `endsWith`, `isEmpty`, `notEmpty` |
+| `target` | `mark` (default), `dataLabel`, `axisX`, `axisY` |
+| `series` | a `y.labels` field; omitted = every series (not used by axis targets) |
+| `then` | what the target can take — below |
 
-`register.js` registers a default module set (bar/line/pie/scatter + grid/tooltip/
-legend/title/dataset/toolbox/dataZoom + canvas & svg). Need more? Register on the
-same instance:
+| target | `then` keys | mechanism |
+|---|---|---|
+| `mark` | `color`, `opacity`, `borderColor`, `borderWidth`, `borderType`, `borderRadius`, `shadowBlur`, `shadowColor`, `shadowOffsetX`, `shadowOffsetY` | an `itemStyle` callback per property, given the whole row |
+| `dataLabel` | `color`, `fontStyle`, `fontWeight`, `fontSize`, `fontFamily`, `backgroundColor`, `borderColor`, `borderWidth`, `borderRadius`, `padding`, `textBorderColor`, `textBorderWidth`, `lineHeight`, plus `hide`, `format` | `label.formatter` + `label.rich` |
+| `axisX`, `axisY` | same as `dataLabel` | `axisLabel.formatter` + `axisLabel.rich` |
+
+- **The first matching rule wins** — for marks, per property; for a label, the first match decides its style, format or `hide`.
+- An unmatched mark keeps its colour: the callback falls back to the series' palette colour (ECharts' default palette without `palette`), because `undefined` would render the mark with no fill.
+- **An axis rule can only test the axis's own value** — ECharts hands an axis formatter the tick value and index, no row.
+- Label styles go through rich text because ECharts' label style callbacks do not work (the function's source ends up in the SVG). A value containing `{`, `}` or `|` cannot be wrapped in rich markup, so that one label is printed unstyled rather than altered.
+- A series or axis that already has a `formatter` is left alone, with a warning — a rule cannot compose with a formatter whose output it does not know.
+- A `visualMap` is deliberately not used: it cannot test a string column, paints unmatched items black, and a second one on a series silently replaces the first.
+- Rules that cannot do anything are dropped and reported: no `field`, no `op`, an unknown `target`, a `series` the chart does not plot, a `then` with nothing its target accepts, and stray keys.
+
+## Chart and buildOption
+
+For callers who would rather write ECharts-shaped specs:
+
+```jsx
+<Chart height={360} spec={{
+  data: rows,
+  xAxis: { field: 'month' }, yAxis: { name: 'Sales' },
+  series: [{ type: 'bar', field: 'sales', name: 'Sales' }]
+}} />
+```
+
+`buildOption(spec)`:
+
+- `data` → `dataset: { source }`.
+- `field` binding → `encode`: `xAxis.field` gives `{ x, y }`; `yAxis.field` gives horizontal `{ y, x }`; `categoryField` / `nameField` with `field` gives `{ itemName, value }`. An explicit `encode` wins.
+- Axis `type` defaults: `category` on x, `value` on y.
+- Defaults where the spec is silent: `animation: true`; with axes, `grid` and `tooltip.trigger: 'axis'`, else `'item'`; a `legend` when there is more than one series.
+- Merged deeply — objects merge key by key, arrays are replaced. `renderer` and `theme` keys are removed.
+
+`Chart` takes `spec`, `height` (320), `theme`, `renderer`, `optimize`, `onEvents`, `notMerge`, `style`, `className`. No theme or colours are applied on this path.
+
+## Registered ECharts modules
+
+Charts: bar, line, pie, scatter, funnel, radar, treemap, heatmap. Components: grid, tooltip, legend, title, dataset, toolbox, dataZoom, markLine, markPoint, radar, visualMap. Renderers: canvas, SVG.
+
+Radar, treemap, heatmap and funnel are registered by default because a type the translator understands but the runtime cannot draw shows as an empty box. Anything else, on the same instance:
 
 ```js
-import { echarts } from '@xeplr/ui-charts';
-import { RadarChart } from 'echarts/charts';
-echarts.use([RadarChart]);
+import { echarts } from '@xeplr/ui-charts'
+import { SunburstChart } from 'echarts/charts'
+echarts.use([SunburstChart])
 ```
 
-## API
+## Tests
 
-`buildOption(spec)` · `<Chart>` · `useECharts(spec, opts)` · `echarts` (configured) ·
-`themes` (`makeTheme`, `xeplrDark`, `xeplrLight`, `registerThemes`, `palettes`).
+```sh
+npm test
+```
 
-`react` and `echarts` are peer deps. `buildOption` + `themes` are pure (no peers) —
-that's what the test suite (`npm test`, 21 tests) covers. Rendering you confirm in-app.
+Pure, no browser: the `ChartOptions` translator (types, aliases, bindings, axis defaults, rules, warnings), `buildOption`, and the container frame. Rendering is checked in an app. (`demo.html` still loads `lib/theme.js`, which has been removed, so it does not run.)
+
+## License
+
+MIT
