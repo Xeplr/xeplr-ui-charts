@@ -998,3 +998,36 @@ test('value axis: a category axis is never given a scale', function () {
   assert.strictEqual(r.option.xAxis.scale, undefined);
   assert.strictEqual(r.option.yAxis.scale, undefined);
 });
+
+// ── a legend at the bottom makes room for itself ─────────────────────────
+// containLabel keeps the axis labels in the plot's box but knows nothing of
+// the legend, so rotated month names ran through a bottom legend.
+
+test('legend at the bottom: the plot\'s bottom edge is raised by the legend\'s height', function () {
+  var r = toOption({ legend: { positioning: { position: 'bottom' } } });
+  assert.strictEqual(r.option.legend.bottom, 0);
+  assert.strictEqual(r.option.grid.bottom, 36);   // 14 (line) + 22 (padding and gap)
+});
+
+test('legend at the bottom: a larger legend font takes more room', function () {
+  var r = toOption({ legend: { positioning: { position: 'bottom' }, font: { size: '20px' } } });
+  assert.strictEqual(r.option.grid.bottom, 42);
+});
+
+test('legend at the bottom: a bottom margin set by hand still wins', function () {
+  var r = toOption({ legend: { positioning: { position: 'bottom' } }, chartArea: { margin: { bottom: '80px' } } });
+  assert.strictEqual(r.option.grid.bottom, 80);
+});
+
+test('legend at the bottom: the other chart-area edges and containLabel are kept', function () {
+  var r = toOption({ legend: { positioning: { position: 'bottom' } }, chartArea: { margin: { left: '10px' } } });
+  assert.strictEqual(r.option.grid.left, 10);
+  assert.strictEqual(r.option.grid.containLabel, true);
+  assert.strictEqual(r.option.grid.bottom, 36);
+});
+
+test('legend at the top, hidden, or not configured: the bottom edge is left alone', function () {
+  assert.strictEqual((toOption({ legend: { positioning: { position: 'top' } } }).option.grid || {}).bottom, undefined);
+  assert.strictEqual((toOption({ legend: { show: false } }).option.grid || {}).bottom, undefined);
+  assert.strictEqual((toOption({}).option.grid || {}).bottom, undefined);
+});

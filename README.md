@@ -90,6 +90,8 @@ The full typedefs are in `type.js`. Sizes are CSS-like strings (`'12px'`, `'1rem
 
 `positioning.position` is `top`, `bottom`, `left`, `right` or `center` (a `left` / `right` legend is vertical); `align` is `start` / `center` / `end`; `margin` offsets.
 
+**A legend at the bottom makes room for itself.** ECharts' `containLabel` keeps the axis labels inside the plot but knows nothing of the legend, so a bottom legend was drawn over the x-axis labels (rotated ones worst). When the legend is at the bottom and no bottom `chartArea` margin or padding is set, the plot's bottom edge is raised by the legend's height — its font size (at least 14px) plus 22px for its padding and a gap — and `containLabel` fits the labels above it. A bottom margin or padding set by hand still wins.
+
 **Nothing unmappable is dropped silently.** Properties ECharts cannot express — `font.letterSpacing`, `transform`, `decoration`, `variant`; `background.image`; `shadow.spread`; container `opacity`; `legend.iconGap`; a `double` border (drawn solid) — are reported in `warnings`.
 
 ## Chart types
