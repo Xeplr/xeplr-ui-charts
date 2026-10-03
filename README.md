@@ -35,7 +35,7 @@ import { XeplrChart } from '@xeplr/ui-charts'
 npm i @xeplr/ui-charts echarts
 ```
 
-Peers: `echarts` (`^5.4.0`), `react` (17+). Dependency: `@xeplr/rules`. CommonJS, no JSX and no build step.
+Peers: `echarts` (`^5.4.0 || ^6.1.0` — 6.1 fixes GHSA-fgmj-fm8m-jvvx, an XSS in the Lines series tooltip), `react` (17+). Dependency: `@xeplr/rules`. CommonJS, no JSX and no build step.
 
 ## Exports
 
