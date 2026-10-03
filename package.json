@@ -1,6 +1,6 @@
 {
   "name": "@xeplr/ui-charts",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "React <XeplrChart> for Apache ECharts, used directly — a semantic ChartOptions object becomes an ECharts option, with conditional formatting from @xeplr/rules",
   "main": "index.js",
   "files": [
