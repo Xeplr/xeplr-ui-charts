@@ -1031,3 +1031,89 @@ test('legend at the top, hidden, or not configured: the bottom edge is left alon
   assert.strictEqual((toOption({ legend: { show: false } }).option.grid || {}).bottom, undefined);
   assert.strictEqual((toOption({}).option.grid || {}).bottom, undefined);
 });
+
+// ── mixed series: one measure drawn its own way, on its own axis ──────────
+var SALES = [{ m: 'Jan', revenue: 120000, orders: 900 }, { m: 'Feb', revenue: 98000, orders: 1100 }];
+function mixed(chartType, yLabels, extra) {
+  return toOption(Object.assign({ data: SALES, chartType: chartType, axes: { x: { labels: ['m'] }, y: { labels: yLabels } } }, extra || {}));
+}
+
+test('a series can be drawn as a line on a bar chart, on the right axis', function () {
+  var r = mixed('bar', ['revenue', { field: 'orders', name: 'Orders', type: 'line', axis: 'right' }]);
+  assert.strictEqual(r.option.series[0].type, 'bar');
+  assert.strictEqual(r.option.series[0].yAxisIndex, undefined);
+  assert.strictEqual(r.option.series[1].type, 'line');
+  assert.strictEqual(r.option.series[1].yAxisIndex, 1);
+  assert.ok(Array.isArray(r.option.yAxis) && r.option.yAxis.length === 2);
+  assert.strictEqual(r.option.yAxis[1].position, 'right');
+  assert.strictEqual(r.option.yAxis[1].type, 'value');
+  assert.deepStrictEqual(r.warnings, []);
+});
+
+test('each axis decides its own zero: bars from zero on the left, a line fitted on the right', function () {
+  var r = mixed('bar', ['revenue', { field: 'orders', type: 'line', axis: 'right' }]);
+  assert.strictEqual(r.option.yAxis[0].scale, false);
+  assert.strictEqual(r.option.yAxis[1].scale, true);
+  // A bar on the right keeps that axis at zero too.
+  var b = mixed('line', ['revenue', { field: 'orders', type: 'bar', axis: 'right' }]);
+  assert.strictEqual(b.option.yAxis[0].scale, true);
+  assert.strictEqual(b.option.yAxis[1].scale, false);
+});
+
+test('the right axis is styled by axes.y2, with its gridlines off unless asked for', function () {
+  var plain = mixed('bar', ['revenue', { field: 'orders', type: 'line', axis: 'right' }]);
+  assert.deepStrictEqual(plain.option.yAxis[1].splitLine, { show: false });
+  assert.deepStrictEqual(plain.option.yAxis[1].boundaryGap, [0, '10%']);
+  var styled = toOption({
+    data: SALES, chartType: 'bar',
+    axes: { x: { labels: ['m'] }, y: { labels: ['revenue', { field: 'orders', type: 'line', axis: 'right' }] },
+      y2: { title: { text: 'Orders' }, grid: { show: true }, ticks: { formatter: 'n' } } }
+  });
+  assert.strictEqual(styled.option.yAxis[1].name, 'Orders');
+  assert.strictEqual(styled.option.yAxis[1].splitLine.show, true);
+  assert.strictEqual(styled.option.yAxis[1].axisLabel.formatter, 'n');
+});
+
+test('no series on the right: one y axis, as before', function () {
+  var r = mixed('bar', ['revenue', { field: 'orders', type: 'line' }]);
+  assert.ok(!Array.isArray(r.option.yAxis));
+  assert.strictEqual(r.option.series[1].type, 'line');
+  assert.strictEqual(r.option.series[1].yAxisIndex, undefined);
+});
+
+test('a series drawn as area is a filled line; a line on an area chart loses the fill', function () {
+  var a = mixed('bar', ['revenue', { field: 'orders', type: 'area' }]);
+  assert.strictEqual(a.option.series[1].type, 'line');
+  assert.ok(a.option.series[1].areaStyle);
+  var l = mixed('area', ['revenue', { field: 'orders', type: 'line' }]);
+  assert.ok(l.option.series[0].areaStyle);
+  assert.strictEqual(l.option.series[1].areaStyle, undefined);
+});
+
+test('a mixed series takes the marks of the type it is drawn as', function () {
+  var r = mixed('bar', ['revenue', { field: 'orders', type: 'line' }], {
+    marks: { bar: { radius: '4px' }, line: { width: '3px' } }
+  });
+  assert.strictEqual(r.option.series[1].lineStyle.width, 3);
+  assert.strictEqual(r.option.series[1].itemStyle && r.option.series[1].itemStyle.borderRadius, undefined);
+});
+
+test('mixing is refused, with a warning, where it cannot mean anything', function () {
+  var pie = mixed('pie', ['revenue', { field: 'orders', type: 'line', axis: 'right' }]);
+  assert.strictEqual(pie.option.series[1].type, 'pie');
+  assert.ok(pie.warnings.some(function (w) { return /only be drawn its own way/.test(w); }));
+  var hbar = mixed('hbar', ['revenue', { field: 'orders', type: 'line' }]);
+  assert.strictEqual(hbar.option.series[1].type, 'bar');
+  assert.ok(!Array.isArray(hbar.option.yAxis));
+  var odd = mixed('bar', ['revenue', { field: 'orders', type: 'pie' }]);
+  assert.strictEqual(odd.option.series[1].type, 'bar');
+  assert.ok(odd.warnings.some(function (w) { return /cannot be drawn as pie/.test(w); }));
+});
+
+test('a Y axis rule styles the left axis when there are two', function () {
+  var r = mixed('bar', ['revenue', { field: 'orders', type: 'line', axis: 'right' }], {
+    rules: [{ field: 'revenue', op: 'gt', value: 100000, target: 'axisY', then: { color: '#c00' } }]
+  });
+  assert.strictEqual(typeof r.option.yAxis[0].axisLabel.formatter, 'function');
+  assert.ok(!r.option.yAxis[1].axisLabel || typeof r.option.yAxis[1].axisLabel.formatter !== 'function');
+});
