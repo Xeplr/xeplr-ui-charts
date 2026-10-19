@@ -79,7 +79,7 @@ The full typedefs are in `type.js`. Sizes are CSS-like strings (`'12px'`, `'1rem
 | `axes.y2` | the right value axis, when a series reads it: the same keys as `axes.y` |
 | `axes.x` / `axes.y` | `show`, `line`, `grid`, `ticks` (`font`, `angle`, `margin`, `length`, `color`, `formatter`), `title` (`text`, `font`, `margin`), `boundaryGap`, `scale` |
 | `title` | `show`, `text`, `font`, `positioning`, `style` |
-| `legend` | `show`, `font`, `positioning`, `itemGap`, `style` |
+| `legend` | `show`, `font`, `positioning`, `itemGap`, `style`, `formatter` (ECharts' own: `'{name}'` or `(name) => text`) |
 | `tooltip` | `show`, `font`, `style`, `formatter` |
 | `dataLabel` | `show`, `positioning`, `font`, `style`, `formatter`, `distance`, `rotate`, `offsetX` / `offsetY`, `minMargin`, `maxWidth`, `overflow`, `layout` (`hideOverlap`, `moveOverlap`), `labelLine` (pie / donut / funnel callouts) |
 | `chartArea` | `margin`, `padding` (added together into `grid`), `style.background` |

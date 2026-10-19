@@ -1117,3 +1117,11 @@ test('a Y axis rule styles the left axis when there are two', function () {
   assert.strictEqual(typeof r.option.yAxis[0].axisLabel.formatter, 'function');
   assert.ok(!r.option.yAxis[1].axisLabel || typeof r.option.yAxis[1].axisLabel.formatter !== 'function');
 });
+
+test('legend.formatter passes through, as a template or a function', function () {
+  var fn = function (name) { return name + ' 52%'; };
+  var r = toOption({ legend: { show: true, formatter: fn } });
+  assert.strictEqual(r.option.legend.formatter, fn);
+  assert.strictEqual(toOption({ legend: { formatter: '{name}!' } }).option.legend.formatter, '{name}!');
+  assert.strictEqual(toOption({ legend: { show: true } }).option.legend.formatter, undefined);
+});
