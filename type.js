@@ -122,13 +122,25 @@
  */
 
 /**
+ * One series on `axes.y.labels`: the data field, what the legend calls it,
+ * and optionally how THIS series is drawn — so a bar chart can draw one
+ * measure as a line on its own scale. Vertical bar / line / area / scatter
+ * charts only; elsewhere `type` and `axis` are ignored with a warning.
+ * @typedef {Object} SeriesLabel
+ * @property {string} field
+ * @property {string} [name]
+ * @property {"bar"|"line"|"area"|"scatter"} [type]
+ * @property {"left"|"right"} [axis]
+ */
+
+/**
  * @typedef {Object} Axis
  * @property {boolean} [show]
  * @property {AxisLine} [line]
  * @property {AxisGrid} [grid]
  * @property {AxisTicks} [ticks]
  * @property {AxisTitle} [title]
- * @property {string[]} [labels]
+ * @property {Array<string|SeriesLabel>} [labels]
  * @property {boolean|Array} [boundaryGap]  ECharts' own, verbatim: a boolean
  *   or [start, end] on a category axis, a [min, max] EXTENSION on a value one.
  *   A value axis defaults to [0, '10%'] — headroom, so the tallest point does
@@ -158,6 +170,8 @@
  * @typedef {Object} Axes
  * @property {Axis} [x]
  * @property {Axis} [y]
+ * @property {Axis} [y2]  the right value axis, added only when a series has
+ *   `axis: 'right'`; its gridlines are off unless `grid.show` is set.
  */
 
 /**

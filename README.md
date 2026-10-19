@@ -75,7 +75,8 @@ The full typedefs are in `type.js`. Sizes are CSS-like strings (`'12px'`, `'1rem
 | `chartType` | an ECharts series type, or an alias — see Chart types |
 | `data` | rows → `dataset.source` |
 | `axes.x.labels` | the category field (`[0]`); a heatmap's second dimension is `[1]` |
-| `axes.y.labels` | one series per entry: `'revenue'` or `{ field: 'revenue', name: 'Revenue (£k)' }` — the field is the data key, the name is what the legend shows |
+| `axes.y.labels` | one series per entry: `'revenue'` or `{ field: 'revenue', name: 'Revenue (£k)' }` — the field is the data key, the name is what the legend shows. An entry may also say how ITS series is drawn: `type` (`bar`, `line`, `area`, `scatter`) and `axis: 'right'` — see Mixed series |
+| `axes.y2` | the right value axis, when a series reads it: the same keys as `axes.y` |
 | `axes.x` / `axes.y` | `show`, `line`, `grid`, `ticks` (`font`, `angle`, `margin`, `length`, `color`, `formatter`), `title` (`text`, `font`, `margin`), `boundaryGap`, `scale` |
 | `title` | `show`, `text`, `font`, `positioning`, `style` |
 | `legend` | `show`, `font`, `positioning`, `itemGap`, `style` |
@@ -93,6 +94,20 @@ The full typedefs are in `type.js`. Sizes are CSS-like strings (`'12px'`, `'1rem
 **A legend at the bottom makes room for itself.** ECharts' `containLabel` keeps the axis labels inside the plot but knows nothing of the legend, so a bottom legend was drawn over the x-axis labels (rotated ones worst). When the legend is at the bottom and no bottom `chartArea` margin or padding is set, the plot's bottom edge is raised by the legend's height — its font size (at least 14px) plus 22px for its padding and a gap — and `containLabel` fits the labels above it. A bottom margin or padding set by hand still wins.
 
 **Nothing unmappable is dropped silently.** Properties ECharts cannot express — `font.letterSpacing`, `transform`, `decoration`, `variant`; `background.image`; `shadow.spread`; container `opacity`; `legend.iconGap`; a `double` border (drawn solid) — are reported in `warnings`.
+
+## Mixed series
+
+A bar chart with one measure drawn as a line on its own scale is the same bar chart with one label changed, not a separate "combo" type:
+
+```js
+axes: { x: { labels: ['month'] }, y: { labels: ['revenue', { field: 'orders', type: 'line', axis: 'right' }] } }
+```
+
+- `type` draws that series as `bar`, `line`, `area` (a filled line) or `scatter`; the rest keep the chart's own type. It takes the `marks` of the type it is drawn as.
+- `axis: 'right'` puts it on a second value axis, `option.yAxis[1]`, styled by `axes.y2`. The right axis is only added when a series reads it, and its gridlines are off unless `axes.y2.grid.show` is set: two sets at two scales never line up.
+- Each axis decides its own zero from the series on it: any bar, stack or fill on an axis keeps it at zero.
+- Only on a vertical bar, line, area or scatter chart. On a pie, a horizontal bar or anything else, the label's `type` and `axis` are ignored with a warning.
+- A Y-axis conditional-formatting rule styles the left axis.
 
 ## Chart types
 
