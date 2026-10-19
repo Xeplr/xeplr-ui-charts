@@ -187,6 +187,7 @@
  * @property {Font} [font]
  * @property {string} [itemGap]
  * @property {string} [iconGap]
+ * @property {string|function(string):string} [formatter]  ECharts' own legend formatter
  * @property {Style} [style]
  */
 
