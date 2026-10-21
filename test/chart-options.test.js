@@ -1125,3 +1125,36 @@ test('legend.formatter passes through, as a template or a function', function ()
   assert.strictEqual(toOption({ legend: { formatter: '{name}!' } }).option.legend.formatter, '{name}!');
   assert.strictEqual(toOption({ legend: { show: true } }).option.legend.formatter, undefined);
 });
+
+// ── a series' own colour ────────────────────────────────────────────────
+test('a series can have its own colour, over the palette', function () {
+  var r = mixed('bar', [{ field: 'revenue', color: '#16a34a' }, 'orders'], { palette: ['#111111', '#222222'] });
+  assert.strictEqual(r.option.series[0].itemStyle.color, '#16a34a');
+  assert.strictEqual((r.option.series[1].itemStyle || {}).color, undefined, 'the other keeps the palette');
+  assert.deepStrictEqual(r.option.color, ['#111111', '#222222']);
+});
+
+test('a line takes its colour on the line and its points', function () {
+  var r = mixed('line', [{ field: 'revenue', color: '#dc2626' }]);
+  assert.strictEqual(r.option.series[0].lineStyle.color, '#dc2626');
+  assert.strictEqual(r.option.series[0].itemStyle.color, '#dc2626');
+});
+
+test('an area takes its colour, and its fill can be more or less solid', function () {
+  var r = mixed('area', [{ field: 'revenue', color: '#7c3aed', fill: { opacity: 0.25 } }]);
+  var s = r.option.series[0];
+  assert.strictEqual(s.itemStyle.color, '#7c3aed');
+  assert.strictEqual(s.lineStyle.color, '#7c3aed');
+  assert.strictEqual(s.areaStyle.opacity, 0.25);
+});
+
+test('a fill opacity outside 0–1 is refused with a warning, not applied', function () {
+  var r = mixed('area', [{ field: 'revenue', fill: { opacity: 4 } }]);
+  assert.strictEqual(r.option.series[0].areaStyle.opacity, undefined);
+  assert.ok(r.warnings.some(function (w) { return /fill.opacity/.test(w); }));
+});
+
+test('a pie ignores a series colour: its colours are its slices', function () {
+  var r = toOption({ data: SALES, chartType: 'pie', axes: { x: { labels: ['m'] }, y: { labels: [{ field: 'revenue', color: '#000000' }] } } });
+  assert.strictEqual((r.option.series[0].itemStyle || {}).color, undefined);
+});

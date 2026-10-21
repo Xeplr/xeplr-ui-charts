@@ -109,6 +109,16 @@ axes: { x: { labels: ['month'] }, y: { labels: ['revenue', { field: 'orders', ty
 - Only on a vertical bar, line, area or scatter chart. On a pie, a horizontal bar or anything else, the label's `type` and `axis` are ignored with a warning.
 - A Y-axis conditional-formatting rule styles the left axis.
 
+## A series' own colour
+
+```js
+axes: { y: { labels: [{ field: 'revenue', color: '#16a34a', fill: { opacity: 0.25 } }] } }
+```
+
+- `color` paints that series over the `palette`: its bars, its line and points, and an area's fill (drawn in the series colour). The other series keep the palette's.
+- `fill.opacity` (0–1) is how solid an area's fill is; outside 0–1 it is refused with a warning.
+- Bars, lines, areas and points only. A pie's colours are its slices', so a series colour there is ignored.
+
 ## Chart types
 
 `chartType` is an ECharts series type — `bar`, `line`, `pie`, `scatter`, or any type you register. Aliases resolve to a real type before anything reaches ECharts, because a series type ECharts does not know renders nothing and says nothing:
