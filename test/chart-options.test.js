@@ -1051,11 +1051,12 @@ test('legend at the top: the plot\'s top edge is lowered by the legend\'s height
 test('legend at the top: a top margin is added to, and a titled value axis adds its line', function () {
   var m = toOption({ legend: { positioning: { position: 'top-right' } }, chartArea: { margin: { top: '8px' } } });
   assert.strictEqual(m.option.grid.top, 8 + 36);
-  // A y title sits above its axis, under the legend: 15 (gap) + 12 (text) + 4.
+  // A y title sits above its axis, under the legend: the legend's line (14 +
+  // 10 padding), then the title's: 15 (its gap) + 12 (its text).
   var t = toOption({ legend: { positioning: { position: 'top' } }, axes: { y: { title: { text: 'Revenue (₹)' } } } });
-  assert.strictEqual(t.option.grid.top, 36 + 31);
+  assert.strictEqual(t.option.grid.top, 24 + 27);
   var g = toOption({ legend: { positioning: { position: 'top' } }, axes: { y: { title: { text: 'Revenue', margin: { bottom: '20px' }, font: { size: '14px' } } } } });
-  assert.strictEqual(g.option.grid.top, 36 + 20 + 14 + 4);
+  assert.strictEqual(g.option.grid.top, 24 + 20 + 14);
   // A percentage cannot be added to.
   var pc = toOption({ legend: { positioning: { position: 'top' } }, chartArea: { margin: { top: '10%' } } });
   assert.strictEqual(pc.option.grid.top, '10%');
