@@ -81,17 +81,18 @@ The full typedefs are in `type.js`. Sizes are CSS-like strings (`'12px'`, `'1rem
 | `title` | `show`, `text`, `font`, `positioning`, `style` |
 | `legend` | `show`, `font`, `positioning`, `itemGap`, `style`, `formatter` (ECharts' own: `'{name}'` or `(name) => text`) |
 | `tooltip` | `show`, `font`, `style`, `formatter` |
+| axis `ticks.interval` | show one x-axis label, then skip this many (`5`: every sixth). Dates are in order, so fewer labels say as much and need no slant. Unset, ECharts decides |
 | `dataLabel` | `show`, `positioning`, `font`, `style`, `formatter`, `distance`, `rotate`, `offsetX` / `offsetY`, `minMargin`, `maxWidth`, `overflow`, `layout` (`hideOverlap`, `moveOverlap`), `labelLine` (pie / donut / funnel callouts) |
 | `chartArea` | `margin`, `padding` (added together into `grid`), `style.background` |
 | `rules` | conditional formatting — see below |
 | `palette` | series colour cycle → `option.color` |
 | `fontFamily` | → `option.textStyle.fontFamily`, which ECharts cascades to all text |
-| `marks` | per chart type: line `width` / `symbol` / `symbolSize` / `smooth`; bar `border.radius` and `gap` (stacked bars only); scatter `symbolSize`; pie `border`, `label.font.color`. Looked up under the alias first (`donut`), then the resolved type (`pie`) |
+| `marks` | per chart type: line `width` / `symbol` / `symbolSize` / `smooth` / `showSymbol` (`false`: the line without its markers; a point still shows on hover); bar `border.radius` and `gap` (stacked bars only); scatter `symbolSize`; pie `border`, `label.font.color`. Looked up under the alias first (`donut`), then the resolved type (`pie`) |
 | `width`, `height`, `top`, `left` | the container, not the option |
 
-`positioning.position` is `top`, `bottom`, `left`, `right` or `center` (a `left` / `right` legend is vertical); `align` is `start` / `center` / `end`; `margin` offsets.
+`positioning.position` is `top`, `bottom`, `left`, `right`, `center`, or a corner: `top-left`, `top-right`, `bottom-left`, `bottom-right` (a `left` / `right` legend is vertical; a corner is its own alignment, so `align` is not read); `align` is `start` / `center` / `end`; `margin` offsets.
 
-**A legend at the bottom makes room for itself.** ECharts' `containLabel` keeps the axis labels inside the plot but knows nothing of the legend, so a bottom legend was drawn over the x-axis labels (rotated ones worst). When the legend is at the bottom and no bottom `chartArea` margin or padding is set, the plot's bottom edge is raised by the legend's height — its font size (at least 14px) plus 22px for its padding and a gap — and `containLabel` fits the labels above it. A bottom margin or padding set by hand still wins.
+**A legend at the bottom makes room for itself.** ECharts' `containLabel` keeps the axis labels inside the plot but knows nothing of the legend, so a bottom legend was drawn over the x-axis labels (rotated ones worst). When the legend is at the bottom (or a bottom corner), the plot's bottom edge is raised by the legend's height — its font size (at least 14px) plus 22px for its padding and a gap — and `containLabel` fits the labels above it. A bottom `chartArea` margin or padding is **added** to that room, never instead of it (it used to win outright, so a theme with an 8px bottom margin left the legend over the labels). A percentage bottom edge is left as given.
 
 **Nothing unmappable is dropped silently.** Properties ECharts cannot express — `font.letterSpacing`, `transform`, `decoration`, `variant`; `background.image`; `shadow.spread`; container `opacity`; `legend.iconGap`; a `double` border (drawn solid) — are reported in `warnings`.
 
@@ -118,6 +119,7 @@ axes: { y: { labels: [{ field: 'revenue', color: '#16a34a', fill: { opacity: 0.2
 - `color` paints that series over the `palette`: its bars, its line and points, and an area's fill (drawn in the series colour). The other series keep the palette's.
 - `fill.opacity` (0–1) is how solid an area's fill is; outside 0–1 it is refused with a warning.
 - Bars, lines, areas and points only. A pie's colours are its slices', so a series colour there is ignored.
+- `markers: false` on a line (or scatter) series hides its markers, over the chart's `marks.line.showSymbol`; `markers: true` turns them back on for that one series.
 
 ## Chart types
 
@@ -152,6 +154,8 @@ Non-cartesian types get **no axes at all** — left in place, theme axis styling
 Set `axes.y.boundaryGap` or `axes.y.scale` (`axes.x` for `hbar`) to override either.
 
 ## Conditional formatting
+
+A rule about ALL the rows — `op: 'isHighest'` or `'isLowest'` (`@xeplr/rules` ≥ 1.0.8) — is answered once over the chart's `data` before any mark is coloured: `{ field: 'revenue', op: 'isHighest', target: 'mark', then: { color: '#22a06b' } }` paints the highest point green and leaves the rest in the series colour.
 
 ```js
 rules: [

@@ -35,6 +35,6 @@
     "echarts": "^6.1.0"
   },
   "dependencies": {
-    "@xeplr/rules": "^1.0.0"
+    "@xeplr/rules": "^1.0.8"
   }
 }

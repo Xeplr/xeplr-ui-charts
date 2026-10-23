@@ -1014,9 +1014,16 @@ test('legend at the bottom: a larger legend font takes more room', function () {
   assert.strictEqual(r.option.grid.bottom, 42);
 });
 
-test('legend at the bottom: a bottom margin set by hand still wins', function () {
-  var r = toOption({ legend: { positioning: { position: 'bottom' } }, chartArea: { margin: { bottom: '80px' } } });
-  assert.strictEqual(r.option.grid.bottom, 80);
+test('legend at the bottom: a bottom margin is added to the legend\'s room, never instead of it', function () {
+  // A theme sets an 8px bottom margin on every chart; when that skipped the
+  // legend's room, the legend and the rotated labels shared one strip.
+  var r = toOption({ legend: { positioning: { position: 'bottom' } }, chartArea: { margin: { bottom: '8px' } } });
+  assert.strictEqual(r.option.grid.bottom, 8 + 36);
+  var p = toOption({ legend: { positioning: { position: 'bottom' } }, chartArea: { margin: { bottom: '80px' }, padding: { bottom: '20px' } } });
+  assert.strictEqual(p.option.grid.bottom, 100 + 36);
+  // A percentage cannot be added to: it stays as given.
+  var pc = toOption({ legend: { positioning: { position: 'bottom' } }, chartArea: { margin: { bottom: '10%' } } });
+  assert.strictEqual(pc.option.grid.bottom, '10%');
 });
 
 test('legend at the bottom: the other chart-area edges and containLabel are kept', function () {
@@ -1157,4 +1164,53 @@ test('a fill opacity outside 0–1 is refused with a warning, not applied', func
 test('a pie ignores a series colour: its colours are its slices', function () {
   var r = toOption({ data: SALES, chartType: 'pie', axes: { x: { labels: ['m'] }, y: { labels: [{ field: 'revenue', color: '#000000' }] } } });
   assert.strictEqual((r.option.series[0].itemStyle || {}).color, undefined);
+});
+
+
+// ── legend corners, label skipping, markers, rules about all the rows ────
+
+test('legend in a corner: top-left, top-right, bottom-left, bottom-right', function () {
+  var at = function (position, align) { return toOption({ legend: { positioning: { position: position, align: align } } }).option.legend; };
+  var tl = at('top-left', 'center');
+  assert.strictEqual(tl.top, 0); assert.strictEqual(tl.left, 0); assert.strictEqual(tl.orient, 'horizontal');
+  var tr = at('top-right');
+  assert.strictEqual(tr.top, 0); assert.strictEqual(tr.right, 0); assert.strictEqual(tr.left, undefined);
+  var bl = at('bottom-left', 'end');
+  assert.strictEqual(bl.bottom, 0); assert.strictEqual(bl.left, 0, 'a corner is its own alignment: align is not read');
+  var br = at('bottom-right');
+  assert.strictEqual(br.bottom, 0); assert.strictEqual(br.right, 0);
+  assert.strictEqual(br._corner, undefined, 'the hint does not reach ECharts');
+  // A bottom corner gets the same room as a bottom legend.
+  assert.strictEqual(toOption({ legend: { positioning: { position: 'bottom-right' } } }).option.grid.bottom, 36);
+});
+
+test('x axis labels: show one, skip N (ticks.interval)', function () {
+  var r = toOption({ axes: { x: { labels: ['m'], ticks: { interval: 5 } }, y: { labels: ['v'] } }, data: ROWS, chartType: 'line' });
+  assert.strictEqual(r.option.xAxis.axisLabel.interval, 5);
+  var none = toOption({ axes: { x: { labels: ['m'], ticks: { angle: 30 } }, y: { labels: ['v'] } }, data: ROWS, chartType: 'line' });
+  assert.strictEqual(none.option.xAxis.axisLabel.interval, undefined, 'not set: ECharts decides, as before');
+});
+
+test('line markers: off for the whole chart, or per series', function () {
+  var chart = toOption({ axes: { x: { labels: ['m'] }, y: { labels: ['v'] } }, data: ROWS, chartType: 'line', marks: { line: { showSymbol: false } } });
+  assert.strictEqual(chart.option.series[0].showSymbol, false);
+  var one = toOption({ axes: { x: { labels: ['m'] }, y: { labels: [{ field: 'v', markers: false }] } }, data: ROWS, chartType: 'line' });
+  assert.strictEqual(one.option.series[0].showSymbol, false);
+  var back = toOption({ axes: { x: { labels: ['m'] }, y: { labels: [{ field: 'v', markers: true }] } }, data: ROWS, chartType: 'line', marks: { line: { showSymbol: false } } });
+  assert.strictEqual(back.option.series[0].showSymbol, true, 'a series can turn its own markers back on');
+  var bar = toOption({ axes: { x: { labels: ['m'] }, y: { labels: [{ field: 'v', markers: false }] } }, data: ROWS, chartType: 'bar' });
+  assert.strictEqual(bar.option.series[0].showSymbol, undefined, 'a bar has no markers to switch');
+  var plain = toOption({ axes: { x: { labels: ['m'] }, y: { labels: ['v'] } }, data: ROWS, chartType: 'line' });
+  assert.strictEqual(plain.option.series[0].showSymbol, undefined, 'not set: as before');
+});
+
+test('a mark rule "is the highest" paints only the highest point; the rest keep their colour', function () {
+  var r = withRules([{ field: 'revenue', op: 'isHighest', target: 'mark', then: { color: '#22a06b' } }], { chartType: 'line' });
+  var f = r.option.series[0].itemStyle.color;
+  assert.strictEqual(f(datum(1)), '#22a06b', 'OPD, 120, is the highest');
+  assert.strictEqual(f(datum(0)), '#5470c6', 'the rest: the series colour');
+  assert.strictEqual(f(datum(2)), '#5470c6');
+  var low = withRules([{ field: 'revenue', op: 'isLowest', target: 'mark', then: { color: '#c2372e' } }]);
+  assert.strictEqual(low.option.series[0].itemStyle.color(datum(2)), '#c2372e', 'ICU, 90, is the lowest');
+  assert.strictEqual(low.option.series[0].itemStyle.color(datum(0)), '#5470c6');
 });
