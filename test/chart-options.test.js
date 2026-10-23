@@ -1039,6 +1039,35 @@ test('legend at the top, hidden, or not configured: the bottom edge is left alon
   assert.strictEqual((toOption({}).option.grid || {}).bottom, undefined);
 });
 
+// ── a legend along the top makes room for itself, and for an axis title ───
+
+test('legend at the top: the plot\'s top edge is lowered by the legend\'s height', function () {
+  ['top', 'top-left', 'top-right'].forEach(function (position) {
+    var r = toOption({ legend: { positioning: { position: position } } });
+    assert.strictEqual(r.option.grid.top, 36, position);
+  });
+});
+
+test('legend at the top: a top margin is added to, and a titled value axis adds its line', function () {
+  var m = toOption({ legend: { positioning: { position: 'top-right' } }, chartArea: { margin: { top: '8px' } } });
+  assert.strictEqual(m.option.grid.top, 8 + 36);
+  // A y title sits above its axis, under the legend: 15 (gap) + 12 (text) + 4.
+  var t = toOption({ legend: { positioning: { position: 'top' } }, axes: { y: { title: { text: 'Revenue (₹)' } } } });
+  assert.strictEqual(t.option.grid.top, 36 + 31);
+  var g = toOption({ legend: { positioning: { position: 'top' } }, axes: { y: { title: { text: 'Revenue', margin: { bottom: '20px' }, font: { size: '14px' } } } } });
+  assert.strictEqual(g.option.grid.top, 36 + 20 + 14 + 4);
+  // A percentage cannot be added to.
+  var pc = toOption({ legend: { positioning: { position: 'top' } }, chartArea: { margin: { top: '10%' } } });
+  assert.strictEqual(pc.option.grid.top, '10%');
+});
+
+test('legend at the side, centred, at the bottom or hidden: the top edge is left alone', function () {
+  ['left', 'right', 'center', 'bottom', 'bottom-right'].forEach(function (position) {
+    assert.strictEqual((toOption({ legend: { positioning: { position: position } } }).option.grid || {}).top, undefined, position);
+  });
+  assert.strictEqual((toOption({ legend: { show: false, positioning: { position: 'top' } } }).option.grid || {}).top, undefined);
+});
+
 // ── mixed series: one measure drawn its own way, on its own axis ──────────
 var SALES = [{ m: 'Jan', revenue: 120000, orders: 900 }, { m: 'Feb', revenue: 98000, orders: 1100 }];
 function mixed(chartType, yLabels, extra) {
