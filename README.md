@@ -123,6 +123,29 @@ axes: { y: { labels: [{ field: 'revenue', color: '#16a34a', fill: { opacity: 0.2
 - Bars, lines, areas and points only. A pie's colours are its slices', so a series colour there is ignored.
 - `markers: false` on a line (or scatter) series hides its markers, over the chart's `marks.line.showSymbol`; `markers: true` turns them back on for that one series.
 
+## A series' line style
+
+```js
+axes: { y: { labels: ['actual', { field: 'predicted', color: '#dc2626', line: { style: 'dashed', width: '2px' } }] } }
+```
+
+- `line.style` is `solid`, `dashed` or `dotted`; `line.width` a CSS size. On a series drawn as a line only — anywhere else it warns and is not drawn.
+
+## Bands
+
+A shaded range between two columns, drawn under the series — a forecast's low and high:
+
+```js
+{ chartType: 'line', data, axes: { x: { labels: ['month'] }, y: { labels: ['actual', 'predicted'] } },
+  bands: [{ low: 'low', high: 'high', name: 'Range', color: '#dc2626', opacity: 0.15 }] }
+```
+
+- `low` and `high` are data fields; `name` is the legend entry (default `Range`); `color` and `opacity` (0–1, default `0.15`) the fill.
+- Drawn as two stacked series: an invisible one at `low` and a filled one `high − low` on it (the span is computed into the dataset as `__band0`, `__band1`, …; the rows passed in are not changed). Both carry the band's name, so **one legend entry** shows and hides the band.
+- The tooltip reads **`low – high`**, never the span; the invisible series is left out of it. A consumer's own tooltip `formatter` is handed both series — read the row (`params.data`) for low and high, and skip the one whose `seriesName` repeats.
+- A row missing low or high has **no band** there (a gap, never a band down to zero).
+- Vertical cartesian charts only (line, bar, area, scatter); elsewhere it warns and draws none.
+
 ## Chart types
 
 `chartType` is an ECharts series type — `bar`, `line`, `pie`, `scatter`, or any type you register. Aliases resolve to a real type before anything reaches ECharts, because a series type ECharts does not know renders nothing and says nothing:

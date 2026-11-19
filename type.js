@@ -131,6 +131,19 @@
  * @property {string} [name]
  * @property {"bar"|"line"|"area"|"scatter"} [type]
  * @property {"left"|"right"} [axis]
+ * @property {string} [color]
+ * @property {{opacity?: number}} [fill]
+ * @property {{style?: "solid"|"dashed"|"dotted", width?: string}} [line]  how this series' line is drawn (line series only)
+ */
+
+/**
+ * A shaded range between two data fields, drawn under the series.
+ * @typedef {Object} Band
+ * @property {string} low    data field of the lower edge
+ * @property {string} high   data field of the upper edge
+ * @property {string} [name] legend entry, default 'Range'
+ * @property {string} [color]
+ * @property {number} [opacity] 0–1, default 0.15
  */
 
 /**
@@ -314,6 +327,7 @@
  *   Cartesian types bind encode {x, y}; the rest — pie, funnel, radar,
  *   treemap and friends — bind {itemName, value} and are given no axes.
  * @property {Object[]} [data]
+ * @property {Band[]} [bands]  shaded ranges (low → high), vertical cartesian charts only
  * @property {Rule[]} [rules]  Conditional formatting — "when this column is
  *   under zero, paint it red". Compiled to an ECharts `visualMap`, which is
  *   ECharts' own mechanism for it; nothing is styled outside the chart.
