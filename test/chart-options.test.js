@@ -1244,3 +1244,63 @@ test('a mark rule "is the highest" paints only the highest point; the rest keep 
   assert.strictEqual(low.option.series[0].itemStyle.color(datum(2)), '#c2372e', 'ICU, 90, is the lowest');
   assert.strictEqual(low.option.series[0].itemStyle.color(datum(0)), '#5470c6');
 });
+
+// ── a series' line style, and bands (1.2.0) ─────────────────────────────
+
+var FORECAST = {
+  chartType: 'line',
+  data: [
+    { d: 'Jan', a: 10, p: null, lo: null, hi: null },
+    { d: 'Feb', a: 12, p: 12, lo: 12, hi: 12 },
+    { d: 'Mar', a: null, p: 14, lo: 11, hi: 17 }
+  ],
+  axes: { x: { labels: ['d'] }, y: { labels: [
+    { field: 'a', name: 'Actual' },
+    { field: 'p', name: 'Predicted', color: '#d33', line: { style: 'dashed', width: '2px' } }
+  ] } },
+  bands: [{ low: 'lo', high: 'hi', name: 'Range', color: '#d33', opacity: 0.2 }]
+};
+
+test('a series line: dashed and its width, on that series only', function () {
+  var r = toOption(FORECAST);
+  var actual = r.option.series.find(function (s) { return s.name === 'Actual'; });
+  var predicted = r.option.series.find(function (s) { return s.name === 'Predicted'; });
+  assert.deepStrictEqual(predicted.lineStyle, { color: '#d33', type: 'dashed', width: 2 });
+  assert.strictEqual(actual.lineStyle, undefined);
+  assert.deepStrictEqual(r.warnings, []);
+});
+
+test('a series line on a bar: said, not drawn', function () {
+  var r = toOption({ chartType: 'bar', data: [{ d: 'a', v: 1 }], axes: { x: { labels: ['d'] }, y: { labels: [{ field: 'v', line: { style: 'dashed' } }] } } });
+  assert.match(r.warnings.join(), /line style applies to a line/);
+});
+
+test('a band: an invisible series at low, a filled one high − low on it, under the series', function () {
+  var r = toOption(FORECAST);
+  var s = r.option.series;
+  assert.deepStrictEqual(s.map(function (x) { return x.name; }), ['Range', 'Range', 'Actual', 'Predicted']);
+  assert.strictEqual(s[0].stack, s[1].stack);
+  assert.deepStrictEqual(s[0].encode, { x: 'd', y: 'lo' });
+  assert.deepStrictEqual(s[1].encode, { x: 'd', y: '__band0' });
+  assert.deepStrictEqual(s[0].tooltip, { show: false });
+  assert.deepStrictEqual(s[1].areaStyle, { color: '#d33', opacity: 0.2 });
+  assert.strictEqual(s[0].lineStyle.opacity, 0);
+  // The span, computed into the dataset; a row without low or high has no band.
+  assert.deepStrictEqual(r.option.dataset.source.map(function (x) { return x.__band0; }), [null, 0, 6]);
+  // The caller's rows are not changed.
+  assert.strictEqual(FORECAST.data[2].__band0, undefined);
+});
+
+test('a band in the tooltip reads low – high, never the span', function () {
+  var r = toOption(FORECAST);
+  var fill = r.option.series[1];
+  assert.strictEqual(fill.tooltip.valueFormatter(6, 2), '11 – 17');
+  assert.strictEqual(fill.tooltip.valueFormatter(null, 0), '–');
+});
+
+test('a band needs low and high, and a vertical cartesian chart', function () {
+  var noHigh = toOption(Object.assign({}, FORECAST, { bands: [{ low: 'lo' }] }));
+  assert.match(noHigh.warnings.join(), /needs both low and high/);
+  var pie = toOption({ chartType: 'pie', data: [{ d: 'a', v: 1, lo: 0, hi: 2 }], axes: { x: { labels: ['d'] }, y: { labels: ['v'] } }, bands: [{ low: 'lo', high: 'hi' }] });
+  assert.match(pie.warnings.join(), /vertical cartesian chart only/);
+});
